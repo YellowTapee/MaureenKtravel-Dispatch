@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Operations from "./operations";
 import Tools from "./tools";
 import Workbench from "./workbench";
+import Insights from './insights';
+import ItineraryEditor from './itinerary-editor';
 type R = { id: string; kind: string; name: string; [key: string]: any };
 const money = (n: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(
@@ -20,6 +22,7 @@ export default function App() {
     [ready, setReady] = useState(false);
   const list = (k: string) => data.filter((r) => r.kind === k);
   const current = data.find((r) => r.id === trip);
+  useEffect(()=>{function shortcut(e:KeyboardEvent){if(!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==='k'){e.preventDefault();setPage('Operations');setTrip('')}if(e.key.toLowerCase()==='j'){e.preventDefault();open('trips')}}document.addEventListener('keydown',shortcut);return()=>document.removeEventListener('keydown',shortcut)},[]);
   const names: Record<string, string> = {
     Finance: "Money",
     Reports: "Reports",
@@ -526,7 +529,7 @@ export default function App() {
                   {list("bookings")
                     .filter((r) => r.trip === trip)
                     .sort((a, b) =>
-                      (a.start || "").localeCompare(b.start || ""),
+                      (a.itineraryOrder??9999)-(b.itineraryOrder??9999)||(a.start || "").localeCompare(b.start || ""),
                     )
                     .map((b) => (
                       <div className="timeline" key={b.id}>
@@ -571,6 +574,8 @@ export default function App() {
               <Operations key={trip} data={data} trip={trip} reload={load} />
               <Tools data={data} trip={trip} reload={load} />
               <Workbench data={data} trip={trip} reload={load} />
+              <Insights data={data} trip={trip} reload={load}/>
+              {tab==='itinerary'&&<ItineraryEditor bookings={list('bookings').filter(b=>b.trip===trip&&b.status!=='Cancelled')} reload={load}/>}
             </>
           ) : page === "Home" ? (
             <>
@@ -744,6 +749,7 @@ export default function App() {
           ) : ["Finance", "Reports"].includes(page) ? (
             <>
               <Tools data={data} reload={load} />
+              <Insights data={data} reload={load}/>
               {stats}
               <div className="sectionhead">
                 <h2>Trip ledger · CAD</h2>
@@ -847,6 +853,11 @@ export default function App() {
                 {field("email", "Email", "email")}
                 {field("phone", "Phone")}
                 {field("notes", "Preferences / notes")}
+                {field('household','Household / group')}
+                {field('preferredAirline','Preferred airline')}
+                {field('seat','Seat preference')}
+                {field('hotelStyle','Hotel / room preferences')}
+                {field('dietary','Dietary needs')}
               </>
             ) : (
               <>
@@ -899,6 +910,11 @@ export default function App() {
                 )}
                 {["bookings", "quotes"].includes(form.kind) && (
                   <>
+                    {field('type','Booking type','text',['Hotel','Flight','Flight + hotel','Cruise','Package','Transfer','Insurance','Activity','Other'])}
+                    {field('flightNumber','Flight number')}
+                    {field('address','Address / pickup location')}
+                    {field('departureAt','Departure with time zone (e.g. 2026-12-01T10:00-08:00)')}
+                    {field('arrivalAt','Arrival with time zone')}
                     {field("supplier", "Supplier", "text", [
                       "Manual",
                       "RateHawk",
@@ -921,6 +937,7 @@ export default function App() {
                 )}
                 {form.kind === "quotes" && (
                   <>
+                    {field('declineReason','Reason declined / option chosen')}
                     {field("inclusions", "Included services")}
                     {field("cancellation", "Cancellation terms")}
                     {field("expires", "Quote valid until", "date")}

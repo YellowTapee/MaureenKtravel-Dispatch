@@ -55,6 +55,10 @@ export async function POST(req: Request) {
       if (x[k] !== undefined && (!Number.isSafeInteger(x[k]) || x[k] < 0))
         throw Error("Invalid amount");
     const { id, kind, ...data } = x;
+    data.name=data.name.trim().replace(/\s+/g,' ');
+    if(data.email)data.email=data.email.trim().toLowerCase();
+    if(JSON.stringify(data).length>100000)throw Error('This record is too large');
+    if(kind==='clients'&&!id&&data.email){const existing=await env.DB!.prepare('SELECT id,data FROM records WHERE kind=?').bind('clients').all();if(existing.results.some((r:any)=>{const c=JSON.parse(r.data);return !c.archived&&c.email?.toLowerCase()===data.email}))throw Error('A client with this email already exists. Open their profile or merge duplicate profiles in Work.');}
     if (
       [
         "bookings",
